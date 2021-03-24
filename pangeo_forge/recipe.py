@@ -4,8 +4,6 @@ A Pangeo Forge Recipe
 
 import json
 import logging
-import os
-import tempfile
 from abc import ABC, abstractmethod
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
