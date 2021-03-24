@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, Hashable, Iterable, List, Optional
 
 import fsspec
+import fsspec.core
 import xarray as xr
 import zarr
 from rechunker.types import MultiStagePipeline, ParallelPipelines, Stage
@@ -134,41 +135,6 @@ def _input_metadata_fname(input_key):
 def _chunk_metadata_fname(chunk_key) -> str:
     return "chunk-meta-" + _encode_key(chunk_key) + ".json"
 
-
-def _copy_btw_filesystems(input_opener, output_opener, BLOCK_SIZE=10_000_000):
-    with input_opener as source:
-        with output_opener as target:
-            while True:
-                data = source.read(BLOCK_SIZE)
-                if not data:
-                    break
-                target.write(data)
-
-
-@contextmanager
-def _maybe_open_or_copy_to_local(opener, copy_to_local, orig_name):
-    _, suffix = os.path.splitext(orig_name)
-    if copy_to_local:
-        ntf = tempfile.NamedTemporaryFile(suffix=suffix)
-        tmp_name = ntf.name
-        logger.info(f"Copying {orig_name} to local file {tmp_name}")
-        target_opener = open(tmp_name, mode="wb")
-        _copy_btw_filesystems(opener, target_opener)
-        yield tmp_name
-        ntf.close()  # cleans up the temporary file
-    else:
-        with opener as fp:
-            with fp as fp2:
-                yield fp2
-
-
-@contextmanager
-def _fsspec_safe_open(fname, **kwargs):
-    # workaround for inconsistent behavior of fsspec.open
-    # https://github.com/intake/filesystem_spec/issues/579
-    with fsspec.open(fname, **kwargs) as fp:
-        with fp as fp2:
-            yield fp2
 
 
 # Notes about dataclasses:
@@ -313,20 +279,6 @@ class NetCDFtoZarrRecipe(BaseRecipe):
         return _prepare_target
 
     @property
-    def cache_input(self) -> Callable:
-        def cache_func(input_key: Hashable) -> None:
-            logger.info(f"Caching input {input_key}")
-            fname = self._inputs[input_key]
-            # TODO: check and see if the file already exists in the cache
-            input_opener = _fsspec_safe_open(fname, mode="rb", **self.fsspec_open_kwargs)
-            target_opener = self.input_cache.open(fname, mode="wb")
-            _copy_btw_filesystems(input_opener, target_opener)
-            if self._cache_metadata:
-                self.cache_input_metadata(input_key)
-
-        return cache_func
-
-    @property
     def store_chunk(self) -> Callable:
         def _store_chunk(chunk_key):
             with self.open_chunk(chunk_key) as ds_chunk:
@@ -355,21 +307,15 @@ class NetCDFtoZarrRecipe(BaseRecipe):
 
     @contextmanager
     def input_opener(self, fname: str):
-        try:
-            logger.info(f"Opening '{fname}' from cache")
-            opener = self.input_cache.open(fname, mode="rb")
-            with _maybe_open_or_copy_to_local(opener, self.copy_input_to_local_file, fname) as fp:
-                yield fp
-        except (IOError, FileNotFoundError):
-            if self.cache_inputs:
-                raise FileNotFoundError(
-                    f"You are trying to open input {fname}, but the file is "
-                    "not cached yet. First call `cache_input` or set "
-                    "`cache_inputs=False`."
-                )
-            logger.info(f"No cache found. Opening input `{fname}` directly.")
-            opener = _fsspec_safe_open(fname, mode="rb", **self.fsspec_open_kwargs)
-            with _maybe_open_or_copy_to_local(opener, self.copy_input_to_local_file, fname) as fp:
+        if self.copy_input_to_local_file and not self.cache_input:
+            raise ValueError
+        fs = fsspec.core.url_to_fs(fname, **self.fsspec_open_kwargs)
+        if self.cache_input:
+            fs = fsspec.filesystem("simplecache", fs=fs, cache_storage=self.input_cache)
+        with fs.open(fname, "rb") as fp:
+            if self.copy_input_to_local_file:
+                yield fp.name
+            else:
                 yield fp
 
     @contextmanager
