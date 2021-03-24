@@ -56,8 +56,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseRecipe(ABC):
-    """Base recipe class from which all other Recipes inherit.
-    """
+    """Base recipe class from which all other Recipes inherit."""
 
     @property
     @abstractmethod
@@ -102,8 +101,7 @@ class BaseRecipe(ABC):
         pass
 
     def to_pipelines(self) -> ParallelPipelines:
-        """Translate recipe to pipeline for execution.
-        """
+        """Translate recipe to pipeline for execution."""
 
         pipeline = []  # type: MultiStagePipeline
         if getattr(self, "cache_inputs", False):  # TODO: formalize this contract
@@ -132,7 +130,6 @@ def _input_metadata_fname(input_key):
 
 def _chunk_metadata_fname(chunk_key) -> str:
     return "chunk-meta-" + _encode_key(chunk_key) + ".json"
-
 
 
 # Notes about dataclasses:
