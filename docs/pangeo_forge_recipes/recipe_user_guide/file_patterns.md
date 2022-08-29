@@ -9,12 +9,37 @@ kernelspec:
 
 # File Patterns
 
+## Pangeo Forge "Pulls" Data
+
+A central concept in Pangeo Forge is that data are "pulled", not "pushed" to
+the storage location. You tell Pangeo Forge where to find your data; when you
+execute a recipe, the data will automatically be downloaded and transformed.
+
+There are basically two ways to tell Pangeo Forge where to find your data:
+- Specify **file paths on your computer**: e.g. `/data/temperature/temperature_01.nc`;
+  This works find if you are just running Pangeo Forge locally; however, it won't
+  work with {doc}`../pangeo_forge_cloud/index` because those files are not accessible
+  from the cloud. _File paths are different on every computer._
+- Specify a **location on the internet via a [URL](https://developer.mozilla.org/en-US/docs/Learn/Common_questions/What_is_a_URL)**,
+  e.g.`http://data-provider.org/data/temperature/temperature_01.nc`.
+  URLs are more general than file paths because they are _the same on every computer_.
+  Using URLs means that your recipe can be run anywhere on the internet.
+  This is a requirement for Pangeo Forge Cloud.
+
+For recipes built from public, open data, it's always best to try to get the data
+from its original, authoritative source. For example, if you want to use satellite
+data from NASA, you need to find the URLs which point to that data on NASA's servers.
+
+## What are File Patterns?
+
+The datasets we want to build with Pangeo Forge are usually derived from many
+individual source files.
+The point of File Patterns is to describe how many individual source files are
+organized logically as part of a larger dataset.
+(In this respect, file patterns are conceptually similar to
+[NCML](https://www.unidata.ucar.edu/software/netcdf-java/v4.5/ncml/index.htm) documents.)
 File patterns are the starting point for any Pangeo Forge recipe:
 they are the raw "ingredients" upon which the recipe will act.
-The point of file patterns is to describe how many individual source files are
-organized logically as part of a larger dataset.
-In this respect, file patterns are conceptually similar to
-[NCML](https://www.unidata.ucar.edu/software/netcdf-java/v4.5/ncml/index.htm) documents.
 
 First we will describe a simple example of how to create a file pattern.
 Then we will dive deeper into the API.
@@ -24,14 +49,14 @@ Then we will dive deeper into the API.
 Imagine we have a set of file paths which look like this
 
 ```
-http://data-provider.org/data/temperature/temperature_01.txt
-http://data-provider.org/data/temperature/temperature_02.txt
+http://data-provider.org/data/temperature/temperature_01.nc
+http://data-provider.org/data/temperature/temperature_02.nc
 ...
-http://data-provider.org/data/temperature/temperature_10.txt
-http://data-provider.org/data/humidity/humidity_01.txt
-http://data-provider.org/data/humidity/humidity_02.txt
+http://data-provider.org/data/temperature/temperature_10.nc
+http://data-provider.org/data/humidity/humidity_01.nc
+http://data-provider.org/data/humidity/humidity_02.nc
 ...
-http://data-provider.org/data/humidity/humidity_10.txt
+http://data-provider.org/data/humidity/humidity_10.nc
 ```
 
 This is a relatively common way to organize data files:
@@ -56,7 +81,7 @@ like this:
 
 ```{code-cell} ipython3
 def make_full_path(variable, time):
-    return f"http://data-provider.org/data/{variable}/{variable}_{time:02d}.txt"
+    return f"http://data-provider.org/data/{variable}/{variable}_{time:02d}.nc"
 
 # check that it works
 make_full_path("humidity", 3)
@@ -152,7 +177,7 @@ belonging to a single physical or logical dimension in a sequence; for example,
 if the `ConcatDim` is time, and we have one record per day, the recipe will
 arrange every record in sequence in the target dataset.
 An important piece of information is *how many records along the concat dim are in each file?*
-For example, does the file `http://data-provider.org/data/temperature/temperature_01.txt`
+For example, does the file `http://data-provider.org/data/temperature/temperature_01.nc`
 have one record of daily temperature? Ten?
 In general, Pangeo Forge does not assume there is a constant, known number of
 records in each file; instead it will discover this information by peeking into each file.
@@ -214,6 +239,3 @@ together with the index
 ```{code-cell} ipython3
 pattern[index]
 ```
-
-
-## File Patterns API
