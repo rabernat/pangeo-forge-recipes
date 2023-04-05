@@ -215,6 +215,10 @@ def daily_xarray_dataset_with_coordinateless_dimension(daily_xarray_dataset):
     del ds["lon"]
     return ds
 
+# @pytest.fixture(scope="session")
+# def daily_xarray_dataset_with_extra_dimension_coordinates():
+#     return make_ds(add_extra_dim_coords=True)
+
 
 @pytest.fixture(scope="session")
 def netcdf_local_paths_sequential_1d(daily_xarray_dataset, tmpdir_factory):

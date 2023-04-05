@@ -67,3 +67,22 @@ def test_xarray_zarr_subpath(
 
     ds = xr.open_dataset(os.path.join(tmp_target_url, "subpath"), engine="zarr")
     xr.testing.assert_equal(ds.load(), daily_xarray_dataset)
+
+# from .data_generation import make_ds
+# def test_failure_chunk_regions():
+#     ds = make_ds(non_dim_coords=True, add_extra_dim_coords=True)
+#     print(ds)
+#     assert False
+
+    #     # create a dummy dataset similar to https://github.com/pangeo-forge/pangeo-forge-recipes/issues/504
+    # nx, ny, nt, nb = 3, 5, 10, 2
+    # data = xr.DataArray(np.random.rand(nx, ny, nt), dims=["x", "y", "time"])
+    # true_coord = xr.DataArray(np.random.rand(nx, ny), dims=["x", "y"])
+    # issue_coord = xr.DataArray(np.random.rand(nt, nb), dims=["time", 'bnds'])
+    # # ds = xr.Dataset(
+    # #     {'data': data, 'issue_coord': issue_coord}, coords={'true_coord': true_coord}
+    # #     )
+    # ds = xr.Dataset({'data': data}, coords={'true_coord': true_coord, 'issue_coord': issue_coord})
+    # schema = dataset_to_schema(ds)
+    # print(determine_target_chunks(schema, specified_chunks={'time': 1, 'x': nx, 'y': ny, 'bnds': nb}))
+    # print(ds)
