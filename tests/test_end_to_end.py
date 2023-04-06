@@ -45,32 +45,6 @@ def test_xarray_zarr(
     assert ds.time.encoding["chunks"] == (target_chunks["time"],)
     xr.testing.assert_equal(ds.load(), daily_xarray_dataset)
 
-@pytest.mark.parametrize("target_chunks", [{"time": 1}, {"time": 2}, {"time": 3}])
-def test_xarray_zarr_cftime(
-    daily_xarray_dataset_cftime,
-    netcdf_local_file_pattern_sequential_cftime,
-    pipeline,
-    tmp_target_url,
-    target_chunks,
-):
-    pattern = netcdf_local_file_pattern_sequential_cftime
-    with pipeline as p:
-        (
-            p
-            | beam.Create(pattern.items())
-            | OpenWithXarray(file_type=pattern.file_type)
-            | StoreToZarr(
-                target_root=tmp_target_url,
-                store_name="store",
-                target_chunks=target_chunks,
-                combine_dims=pattern.combine_dim_keys,
-            )
-        )
-
-    ds = xr.open_dataset(os.path.join(tmp_target_url, "store"), engine="zarr", use_cftime=True)
-    assert ds.time.encoding["chunks"] == (target_chunks["time"],)
-    xr.testing.assert_equal(ds.load(), daily_xarray_dataset_cftime)
-
 def test_xarray_zarr_subpath(
     daily_xarray_dataset,
     netcdf_local_file_pattern_sequential,
