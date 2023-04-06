@@ -204,10 +204,6 @@ def daily_xarray_dataset():
     return make_ds(nt=10)
 
 @pytest.fixture(scope="session")
-def daily_xarray_dataset_cftime():
-    return make_ds(nt=10, use_cftime=True)
-
-@pytest.fixture(scope="session")
 def daily_xarray_dataset_with_coordinateless_dimension(daily_xarray_dataset):
     """
     A Dataset with a coordinateless dimension.
@@ -227,12 +223,6 @@ def daily_xarray_dataset_with_extra_dimension_coordinates():
 
 @pytest.fixture(scope="session")
 def netcdf_local_paths_sequential_1d(daily_xarray_dataset, tmpdir_factory):
-    return make_local_paths(
-        daily_xarray_dataset, tmpdir_factory, "D", split_up_files_by_day, file_type="netcdf4"
-    )
-
-@pytest.fixture(scope="session")
-def netcdf_local_paths_sequential_1d_cftime(daily_xarray_dataset_cftime, tmpdir_factory):
     return make_local_paths(
         daily_xarray_dataset, tmpdir_factory, "D", split_up_files_by_day, file_type="netcdf4"
     )
@@ -270,15 +260,6 @@ def netcdf_local_paths_sequential_2d(daily_xarray_dataset, tmpdir_factory):
 def netcdf_local_paths_sequential(request):
     return request.param
 
-@pytest.fixture(scope="session")
-def netcdf_local_paths_sequential_cftime(daily_xarray_dataset_cftime, tmpdir_factory):
-    return make_local_paths(
-        daily_xarray_dataset_cftime,
-        tmpdir_factory,
-        "D",
-        split_up_files_by_day,
-        file_type="netcdf4",
-    )
 
 @pytest.fixture(scope="session")
 def netcdf_local_paths_sequential_multivariable_1d(daily_xarray_dataset, tmpdir_factory):
@@ -425,10 +406,6 @@ def netcdf_local_paths_sequential_with_coordinateless_dimension(
 @pytest.fixture(scope="session")
 def netcdf_local_file_pattern_sequential(netcdf_local_paths_sequential):
     return make_file_pattern(netcdf_local_paths_sequential)
-
-@pytest.fixture(scope="session")
-def netcdf_local_file_pattern_sequential_cftime(netcdf_local_paths_sequential_cftime):
-    return make_file_pattern(netcdf_local_paths_sequential_cftime)
 
 @pytest.fixture(scope="session")
 def netcdf_local_file_pattern_sequential_multivariable(
