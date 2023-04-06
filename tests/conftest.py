@@ -203,6 +203,9 @@ def make_http_paths(netcdf_local_paths, request):
 def daily_xarray_dataset():
     return make_ds(nt=10)
 
+@pytest.fixture(scope="session")
+def daily_xarray_dataset_cftime():
+    return make_ds(nt=10, use_cftime=True)
 
 @pytest.fixture(scope="session")
 def daily_xarray_dataset_with_coordinateless_dimension(daily_xarray_dataset):
@@ -215,13 +218,21 @@ def daily_xarray_dataset_with_coordinateless_dimension(daily_xarray_dataset):
     del ds["lon"]
     return ds
 
-# @pytest.fixture(scope="session")
-# def daily_xarray_dataset_with_extra_dimension_coordinates():
-#     return make_ds(add_extra_dim_coords=True)
+@pytest.fixture(scope="session")
+def daily_xarray_dataset_with_extra_dimension_coordinates():
+    ds = make_ds(nt=11, add_extra_dim_coords=True)
+    ds['extra_dim_var'] = ds['extra_dim_coord']
+    return ds
 
 
 @pytest.fixture(scope="session")
 def netcdf_local_paths_sequential_1d(daily_xarray_dataset, tmpdir_factory):
+    return make_local_paths(
+        daily_xarray_dataset, tmpdir_factory, "D", split_up_files_by_day, file_type="netcdf4"
+    )
+
+@pytest.fixture(scope="session")
+def netcdf_local_paths_sequential_1d_cftime(daily_xarray_dataset_cftime, tmpdir_factory):
     return make_local_paths(
         daily_xarray_dataset, tmpdir_factory, "D", split_up_files_by_day, file_type="netcdf4"
     )
@@ -259,6 +270,15 @@ def netcdf_local_paths_sequential_2d(daily_xarray_dataset, tmpdir_factory):
 def netcdf_local_paths_sequential(request):
     return request.param
 
+@pytest.fixture(scope="session")
+def netcdf_local_paths_sequential_cftime(daily_xarray_dataset_cftime, tmpdir_factory):
+    return make_local_paths(
+        daily_xarray_dataset_cftime,
+        tmpdir_factory,
+        "D",
+        split_up_files_by_day,
+        file_type="netcdf4",
+    )
 
 @pytest.fixture(scope="session")
 def netcdf_local_paths_sequential_multivariable_1d(daily_xarray_dataset, tmpdir_factory):
@@ -306,6 +326,28 @@ def netcdf_local_paths_sequential_multivariable_with_coordinateless_dimension(
         split_up_files_by_variable_and_day,
         file_type="netcdf4",
     )
+
+@pytest.fixture(scope='session')
+def netcdf_local_paths_sequential_with_extra_dimension_coordinate(
+    daily_xarray_dataset_with_extra_dimension_coordinates, tmpdir_factory
+    ):
+    return make_local_paths(
+        daily_xarray_dataset_with_extra_dimension_coordinates,
+        tmpdir_factory,
+        "D",
+        split_up_files_by_day,
+        file_type="netcdf4",
+    )
+
+@pytest.fixture(
+    scope="session",
+    params=[
+        lazy_fixture("netcdf_local_paths_sequential_with_extra_dimension_coordinate"),
+    ],
+)
+def netcdf_local_paths_sequential_extra_dimension_coordinate(request):
+    return request.param
+
 
 
 @pytest.fixture(
@@ -384,6 +426,9 @@ def netcdf_local_paths_sequential_with_coordinateless_dimension(
 def netcdf_local_file_pattern_sequential(netcdf_local_paths_sequential):
     return make_file_pattern(netcdf_local_paths_sequential)
 
+@pytest.fixture(scope="session")
+def netcdf_local_file_pattern_sequential_cftime(netcdf_local_paths_sequential_cftime):
+    return make_file_pattern(netcdf_local_paths_sequential_cftime)
 
 @pytest.fixture(scope="session")
 def netcdf_local_file_pattern_sequential_multivariable(
@@ -421,6 +466,12 @@ def netcdf_local_file_pattern_sequential_with_coordinateless_dimension(
     Filepattern where one of the dimensions doesn't have a coordinate.
     """
     return make_file_pattern(netcdf_local_paths_sequential_with_coordinateless_dimension)
+
+@pytest.fixture(scope='session')
+def netcdf_local_file_pattern_sequential_extra_dimension_coordinate(
+    netcdf_local_paths_sequential_extra_dimension_coordinate,
+    ):
+    return make_file_pattern(netcdf_local_paths_sequential_extra_dimension_coordinate)
 
 
 # Storage fixtures --------------------------------------------------------------------------------

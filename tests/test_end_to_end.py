@@ -19,7 +19,7 @@ def pipeline():
         yield p
 
 
-@pytest.mark.parametrize("target_chunks", [{"time": 1}, {"time": 2}, {"time": 3}])
+@pytest.mark.parametrize("target_chunks", [{"time": 1}, {"time": 2}, {"time": 3}, {'time':1, 'lon': 18}])
 def test_xarray_zarr(
     daily_xarray_dataset,
     netcdf_local_file_pattern_sequential,
@@ -45,6 +45,31 @@ def test_xarray_zarr(
     assert ds.time.encoding["chunks"] == (target_chunks["time"],)
     xr.testing.assert_equal(ds.load(), daily_xarray_dataset)
 
+@pytest.mark.parametrize("target_chunks", [{"time": 1}, {"time": 2}, {"time": 3}])
+def test_xarray_zarr_cftime(
+    daily_xarray_dataset_cftime,
+    netcdf_local_file_pattern_sequential_cftime,
+    pipeline,
+    tmp_target_url,
+    target_chunks,
+):
+    pattern = netcdf_local_file_pattern_sequential_cftime
+    with pipeline as p:
+        (
+            p
+            | beam.Create(pattern.items())
+            | OpenWithXarray(file_type=pattern.file_type)
+            | StoreToZarr(
+                target_root=tmp_target_url,
+                store_name="store",
+                target_chunks=target_chunks,
+                combine_dims=pattern.combine_dim_keys,
+            )
+        )
+
+    ds = xr.open_dataset(os.path.join(tmp_target_url, "store"), engine="zarr", use_cftime=True)
+    assert ds.time.encoding["chunks"] == (target_chunks["time"],)
+    xr.testing.assert_equal(ds.load(), daily_xarray_dataset_cftime)
 
 def test_xarray_zarr_subpath(
     daily_xarray_dataset,
@@ -68,21 +93,32 @@ def test_xarray_zarr_subpath(
     ds = xr.open_dataset(os.path.join(tmp_target_url, "subpath"), engine="zarr")
     xr.testing.assert_equal(ds.load(), daily_xarray_dataset)
 
-# from .data_generation import make_ds
-# def test_failure_chunk_regions():
-#     ds = make_ds(non_dim_coords=True, add_extra_dim_coords=True)
-#     print(ds)
-#     assert False
+@pytest.mark.parametrize("target_chunks", [{"time": 1}, {"time": 2}, {"time": 3}])
+def test_xarray_zarr_extra_dimension_coordinate(
+    daily_xarray_dataset_with_extra_dimension_coordinates,
+    netcdf_local_file_pattern_sequential_extra_dimension_coordinate,
+    pipeline,
+    tmp_target_url,
+    target_chunks,
+):
+    # triggers https://github.com/pangeo-forge/pangeo-forge-recipes/issues/504
+    target_chunks['extra_dim'] = 2
 
-    #     # create a dummy dataset similar to https://github.com/pangeo-forge/pangeo-forge-recipes/issues/504
-    # nx, ny, nt, nb = 3, 5, 10, 2
-    # data = xr.DataArray(np.random.rand(nx, ny, nt), dims=["x", "y", "time"])
-    # true_coord = xr.DataArray(np.random.rand(nx, ny), dims=["x", "y"])
-    # issue_coord = xr.DataArray(np.random.rand(nt, nb), dims=["time", 'bnds'])
-    # # ds = xr.Dataset(
-    # #     {'data': data, 'issue_coord': issue_coord}, coords={'true_coord': true_coord}
-    # #     )
-    # ds = xr.Dataset({'data': data}, coords={'true_coord': true_coord, 'issue_coord': issue_coord})
-    # schema = dataset_to_schema(ds)
-    # print(determine_target_chunks(schema, specified_chunks={'time': 1, 'x': nx, 'y': ny, 'bnds': nb}))
-    # print(ds)
+    pattern = netcdf_local_file_pattern_sequential_extra_dimension_coordinate
+    
+    with pipeline as p:
+        (
+            p
+            | beam.Create(pattern.items())
+            | OpenWithXarray(file_type=pattern.file_type)
+            | StoreToZarr(
+                target_root=tmp_target_url,
+                store_name="store",
+                target_chunks=target_chunks,
+                combine_dims=pattern.combine_dim_keys,
+            )
+        )
+
+    ds = xr.open_dataset(os.path.join(tmp_target_url, "store"), engine="zarr")
+    assert ds.time.encoding["chunks"] == (target_chunks["time"],)
+    xr.testing.assert_equal(ds.load(), daily_xarray_dataset_with_extra_dimension_coordinates)
